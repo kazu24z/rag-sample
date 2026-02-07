@@ -23,6 +23,7 @@
     "@ai-sdk/google": "^1.0.0",
     "@ai-sdk/svelte": "^1.0.0",
     "@google-cloud/discoveryengine": "^1.0.0",
+    "@google-cloud/storage": "^7.19.0",
     "ai": "^4.0.0"
   }
 }
