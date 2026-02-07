@@ -24,13 +24,15 @@ output "search_engine_name" {
 }
 
 output "service_account_email" {
-  description = "Service Account email"
-  value       = google_service_account.vertex_search.email
+  description = "Application Backend Service Account email"
+  value       = google_service_account.app_backend.email
 }
+
+
 
 output "setup_instructions" {
   description = "Next steps to complete setup"
-  value = <<-EOT
+  value       = <<-EOT
     
     ✅ Terraform resources created successfully!
     

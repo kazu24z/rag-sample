@@ -67,27 +67,34 @@ resource "google_storage_bucket" "documents" {
   depends_on = [google_project_service.storage]
 }
 
-# Service Account for VertexAI Search
-resource "google_service_account" "vertex_search" {
-  account_id   = "vertex-search-sa"
-  display_name = "VertexAI Search Service Account"
-  description  = "Service account for VertexAI Search RAG application"
+# Service Account for RAG Application Backend
+resource "google_service_account" "app_backend" {
+  account_id   = "rag-app-backend-sa"
+  display_name = "RAG Application Backend Service Account"
+  description  = "Service account for RAG application backend (VertexAI Search + GCS access)"
 
   depends_on = [google_project_service.iam]
 }
 
-# IAM: Discovery Engine Admin
-resource "google_project_iam_member" "discovery_engine_admin" {
+# IAM: Discovery Engine User (for search API)
+resource "google_project_iam_member" "discovery_engine_user" {
   project = var.project_id
-  role    = "roles/discoveryengine.admin"
-  member  = "serviceAccount:${google_service_account.vertex_search.email}"
+  role    = "roles/discoveryengine.user"
+  member  = "serviceAccount:${google_service_account.app_backend.email}"
 }
 
-# IAM: Storage Object Viewer
+# IAM: Storage Object Viewer (for GCS read access)
 resource "google_storage_bucket_iam_member" "bucket_viewer" {
   bucket = google_storage_bucket.documents.name
   role   = "roles/storage.objectViewer"
-  member = "serviceAccount:${google_service_account.vertex_search.email}"
+  member = "serviceAccount:${google_service_account.app_backend.email}"
+}
+
+# IAM: Service Account Token Creator (for signed URLs)
+resource "google_service_account_iam_member" "token_creator" {
+  service_account_id = google_service_account.app_backend.name
+  role               = "roles/iam.serviceAccountTokenCreator"
+  member             = "serviceAccount:${google_service_account.app_backend.email}"
 }
 
 # VertexAI Search Data Store
