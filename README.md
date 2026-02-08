@@ -2,7 +2,7 @@
 
 VertexAI Search を RAG 検索ツールとして使用するシンプルなチャットアプリケーション。
 
-<video src="media/demo.mp4" controls width="600"></video>
+![demo](./media/demo.gif)
 
 ## 技術スタック
 
