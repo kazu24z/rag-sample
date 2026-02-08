@@ -2,6 +2,8 @@
 
 VertexAI Search を RAG 検索ツールとして使用するシンプルなチャットアプリケーション。
 
+<video src="media/demo.mov" controls width="600"></video>
+
 ## 技術スタック
 
 - **フロントエンド**: SvelteKit
