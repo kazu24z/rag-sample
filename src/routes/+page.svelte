@@ -4,6 +4,32 @@
   const { messages, input, handleSubmit, isLoading, error } = useChat({
     api: "/api/chat",
   });
+
+  // テキスト内のURLとマークダウンリンクをHTMLに変換する関数
+  function linkifyContent(text: string): string {
+    // マークダウン形式のリンク [テキスト](URL) を先に変換
+    let result = text.replace(
+      /\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g,
+      '<a href="$2" target="_blank" rel="noopener noreferrer" class="gcs-link">$1</a>'
+    );
+    
+    // 生のHTTPS URLをリンク化
+    result = result.replace(
+      /(?<![">])(https:\/\/[^\s\)<]+)(?![^<]*<\/a>)/g,
+      '<a href="$1" target="_blank" rel="noopener noreferrer" class="gcs-link">$1</a>'
+    );
+    
+    // gs:// で始まるURLも検出（念のため）
+    result = result.replace(
+      /gs:\/\/([^\s\)]+)/g,
+      (match, path) => {
+        const httpsUrl = `https://storage.googleapis.com/${path}`;
+        return `<a href="${httpsUrl}" target="_blank" rel="noopener noreferrer" class="gcs-link">${match}</a>`;
+      }
+    );
+    
+    return result;
+  }
 </script>
 
 <svelte:head>
@@ -36,19 +62,19 @@
               {/if}
             </div>
             <div class="message-content">
-              {message.content}
+              {@html linkifyContent(message.content)}
             </div>
             {#if message.toolInvocations && message.toolInvocations.length > 0}
               <div class="tool-invocations">
                 {#each message.toolInvocations as tool}
                   <div class="tool-call">
                     <span class="tool-icon">🔧</span>
-                    {#if tool.toolName === "searchDocuments"}
+                    {#if tool.toolName === "findDocuments"}
                       <span>検索中: "{tool.args.query}"</span>
                     {/if}
                     {#if tool.state === "result" && tool.result}
                       <div class="tool-result">
-                        ✅ {tool.result.resultsCount || 0} 件の結果を取得
+                        ✅ {tool.result.count || 0} 件の結果を取得
                       </div>
                     {/if}
                   </div>
@@ -279,6 +305,20 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
+  }
+
+  .gcs-link {
+    color: #4a90e2;
+    text-decoration: none;
+    border-bottom: 1px solid #4a90e2;
+    transition: all 0.2s;
+    word-break: break-all;
+  }
+
+  .gcs-link:hover {
+    color: #2c5aa0;
+    border-bottom-color: #2c5aa0;
+    background: rgba(74, 144, 226, 0.1);
   }
 
   .input-form {

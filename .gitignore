@@ -62,3 +62,6 @@ infra/crash.*.log
 # Google Cloud
 *-service-account.json
 gcp-key.json
+
+# Other
+service-account-key.json

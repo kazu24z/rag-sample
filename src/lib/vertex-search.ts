@@ -1,9 +1,10 @@
 import { SearchServiceClient } from '@google-cloud/discoveryengine';
+import { GOOGLE_CLOUD_PROJECT_ID, VERTEX_SEARCH_LOCATION, VERTEX_SEARCH_ENGINE_ID } from '$env/static/private';
 
 // 環境変数から設定を取得
-const projectId = process.env.GOOGLE_CLOUD_PROJECT_ID || '';
-const location = process.env.VERTEX_SEARCH_LOCATION || 'global';
-const engineId = process.env.VERTEX_SEARCH_ENGINE_ID || '';
+const projectId = GOOGLE_CLOUD_PROJECT_ID || '';
+const location = VERTEX_SEARCH_LOCATION || 'global';
+const engineId = VERTEX_SEARCH_ENGINE_ID || '';
 
 // VertexAI Search クライアント
 let searchClient: SearchServiceClient | null = null;
@@ -62,56 +63,58 @@ export async function searchDocuments(
 			spellCorrectionSpec: {
 				mode: 'AUTO' as const,
 			},
+			contentSearchSpec: {
+				extractiveContentSpec: {
+					maxExtractiveAnswerCount: 3,
+				},
+				snippetSpec: {
+					returnSnippet: true,
+				},
+			},
 		};
 
-		// 検索を実行
-		const [response] = await client.search(request);
+		// 検索を実行（第1要素が結果の配列）
+		const [searchResults] = await client.search(request);
 
 		// 結果を整形
 		const results: SearchResult[] = [];
 
-		if (response.results) {
-			for (const result of response.results) {
-				const document = result.document;
-				if (!document) continue;
+		for (const result of searchResults) {
+			const document = result.document;
+			if (!document) continue;
 
-				// ドキュメントから情報を抽出
-				const structData = document.structData;
-				const derivedStructData = document.derivedStructData;
+			const derivedStructData = document.derivedStructData;
 
-				// タイトルとコンテンツを取得
-				let title = '';
-				let content = '';
-				let uri = '';
+			let title = '';
+			let content = '';
+			let uri = '';
 
-				if (structData) {
-					title = structData.fields?.title?.stringValue || '';
-					content = structData.fields?.content?.stringValue || '';
-					uri = structData.fields?.uri?.stringValue || '';
+			if (derivedStructData?.fields) {
+				title = derivedStructData.fields.title?.stringValue || '';
+				uri = derivedStructData.fields.link?.stringValue || '';
+
+				// extractive_answers → snippets → fallback の順で取得
+				const extractiveAnswers =
+					derivedStructData.fields.extractive_answers?.listValue?.values;
+				const snippets =
+					derivedStructData.fields.snippets?.listValue?.values;
+
+				if (extractiveAnswers?.[0]) {
+					content =
+						extractiveAnswers[0].structValue?.fields?.content
+							?.stringValue || '';
+				} else if (snippets?.[0]) {
+					content =
+						snippets[0].structValue?.fields?.snippet?.stringValue || '';
 				}
-
-				if (derivedStructData) {
-					if (!title) {
-						title = derivedStructData.fields?.title?.stringValue || '';
-					}
-					if (!content) {
-						content =
-							derivedStructData.fields?.extractive_answers?.listValue?.values?.[0]?.structValue?.fields?.content?.stringValue ||
-							derivedStructData.fields?.snippets?.listValue?.values?.[0]?.structValue?.fields?.snippet?.stringValue ||
-							'';
-					}
-					if (!uri) {
-						uri = derivedStructData.fields?.link?.stringValue || '';
-					}
-				}
-
-				results.push({
-					id: document.id || '',
-					title: title || 'Untitled',
-					content: content || 'No content available',
-					uri: uri || undefined,
-				});
 			}
+
+			results.push({
+				id: document.id || '',
+				title: title || 'Untitled',
+				content: content || 'No content available',
+				uri: uri || undefined,
+			});
 		}
 
 		return results;
